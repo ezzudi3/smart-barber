@@ -1,0 +1,41 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "barberapp1-ea227",
+          "appId": "1:729434133966:android:65e73d7a276542e9c7879f",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "barberapp1-ea227",
+          "configurations": {
+            "android": "1:729434133966:android:65e73d7a276542e9c7879f",
+            "ios": "1:729434133966:ios:1f8980f32d5bd7dfc7879f",
+            "macos": "1:729434133966:ios:1f8980f32d5bd7dfc7879f",
+            "web": "1:729434133966:web:8e63f3615b48f197c7879f",
+            "windows": "1:729434133966:web:075f13625b7d76ebc7879f"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}

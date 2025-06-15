@@ -1,0 +1,33 @@
+buildscript {
+    repositories {
+        google() // Make sure google() is included
+        mavenCentral() // mavenCentral() for other dependencies
+    }
+
+    dependencies {
+        // Add the Android Gradle Plugin (AGP) version (8.6+ is required for newer androidx dependencies)
+        classpath 'com.android.tools.build:gradle:8.6.1'
+        // If you're using Kotlin, include the Kotlin plugin as well:
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.10'
+        classpath 'com.google.gms:google-services:4.4.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
+rootProject.layout.buildDirectory.value(newBuildDir)
+
+subprojects {
+    def newSubprojectBuildDir = newBuildDir.dir(project.name)
+    project.layout.buildDirectory.value(newSubprojectBuildDir)
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
+}
