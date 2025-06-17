@@ -34,6 +34,40 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     {'label': 'Request', 'icon': Icons.request_page, 'route': '/request'},
   ];
 
+  // Services with real image URLs
+  final List<Map<String, dynamic>> services = [
+    {
+      'name': 'Haircut',
+      'icon': Icons.content_cut,
+      'image': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      'description': 'Professional haircuts'
+    },
+    {
+      'name': 'Beard Trim',
+      'icon': Icons.face,
+      'image': 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      'description': 'Precise beard styling'
+    },
+    {
+      'name': 'Shave',
+      'icon': Icons.straighten,
+      'image': 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      'description': 'Classic wet shave'
+    },
+    {
+      'name': 'Fade',
+      'icon': Icons.gradient,
+      'image': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      'description': 'Modern fade cuts'
+    },
+    {
+      'name': 'Coloring',
+      'icon': Icons.palette,
+      'image': 'https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      'description': 'Hair coloring service'
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -174,6 +208,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A), // Dark background
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         elevation: 0,
         backgroundColor: Colors.black,
         flexibleSpace: Container(
@@ -442,7 +477,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
 
               const SizedBox(height: 30),
 
-              // Services Section
+              // Services Section with Images
               const Text(
                 'Services',
                 style: TextStyle(
@@ -452,53 +487,147 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  {'name': 'Haircut', 'icon': Icons.content_cut},
-                  {'name': 'Beard Trim', 'icon': Icons.face},
-                  {'name': 'Shave', 'icon': Icons.straighten},
-                  {'name': 'Fade', 'icon': Icons.gradient},
-                  {'name': 'Coloring', 'icon': Icons.palette},
-                ].map((service) => GestureDetector(
-                  onTap: () {
-                    Navigator.pushNamed(context, '/barbersByService', arguments: service['name']);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF2A2A2A),
-                          const Color(0xFF1A1A1A),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+
+              // Horizontal scrollable services with images
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: services.length,
+                  itemBuilder: (context, index) {
+                    final service = services[index];
+                    return Container(
+                      width: 160,
+                      margin: EdgeInsets.only(
+                        right: index < services.length - 1 ? 16 : 0,
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          service['icon'] as IconData,
-                          color: Colors.orange,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          service['name'] as String,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                              context,
+                              '/barbersByService',
+                              arguments: service['name']
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2A2A2A), Color(0xFF1A1A1A)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            border: Border.all(
+                              color: Colors.orange.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Service Image
+                              Expanded(
+                                flex: 3,
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    topRight: Radius.circular(16),
+                                  ),
+                                  child: Container(
+                                    width: double.infinity,
+                                    child: Image.network(
+                                      service['image'],
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Container(
+                                          color: Colors.grey.withOpacity(0.3),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Colors.orange,
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey.withOpacity(0.3),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                service['icon'] as IconData,
+                                                color: Colors.orange,
+                                                size: 40,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                service['name'],
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // Service Info
+                              Expanded(
+                                flex: 2,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            service['icon'] as IconData,
+                                            color: Colors.orange,
+                                            size: 16,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              service['name'],
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        service['description'],
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                )).toList(),
+                      ),
+                    );
+                  },
+                ),
               ),
 
               const SizedBox(height: 30),

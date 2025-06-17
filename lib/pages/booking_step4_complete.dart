@@ -26,15 +26,53 @@ class BookingStep4Complete extends StatefulWidget {
   State<BookingStep4Complete> createState() => _BookingStep4CompleteState();
 }
 
-class _BookingStep4CompleteState extends State<BookingStep4Complete> {
+class _BookingStep4CompleteState extends State<BookingStep4Complete>
+    with TickerProviderStateMixin {
   bool isSaving = true;
   String? barberPhone;
+
+  late AnimationController _successAnimationController;
+  late AnimationController _slideAnimationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize animations
+    _successAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _successAnimationController, curve: Curves.elasticOut),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideAnimationController, curve: Curves.easeOut));
+
     fetchBarberPhone();
     saveBookingToFirestore();
+  }
+
+  @override
+  void dispose() {
+    _successAnimationController.dispose();
+    _slideAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchBarberPhone() async {
@@ -79,7 +117,18 @@ class _BookingStep4CompleteState extends State<BookingStep4Complete> {
       final slotAvailable = await isSlotAvailable(start, end);
       if (!slotAvailable) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ This slot was just booked by someone else.")),
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Text("This slot was just booked by someone else."),
+              ],
+            ),
+            backgroundColor: Colors.red.shade400,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
         Navigator.pop(context);
         return;
@@ -114,10 +163,28 @@ class _BookingStep4CompleteState extends State<BookingStep4Complete> {
       });
 
       setState(() => isSaving = false);
+
+      // Start animations after booking is saved
+      _successAnimationController.forward();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _slideAnimationController.forward();
+      });
+
     } catch (e) {
       print("❌ Error saving booking: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving booking: $e")),
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text("Error saving booking: $e")),
+            ],
+          ),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     }
   }
@@ -125,7 +192,18 @@ class _BookingStep4CompleteState extends State<BookingStep4Complete> {
   void openWhatsAppChat() async {
     if (barberPhone == null || barberPhone!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Barber phone number is missing.")),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning, color: Colors.white),
+              SizedBox(width: 8),
+              Text("Barber phone number is missing."),
+            ],
+          ),
+          backgroundColor: Colors.orange.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
@@ -139,9 +217,119 @@ class _BookingStep4CompleteState extends State<BookingStep4Complete> {
       await launchUrlString(url, mode: LaunchMode.externalApplication);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Unable to launch WhatsApp")),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text("Unable to launch WhatsApp"),
+            ],
+          ),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     }
+  }
+
+  Widget _buildServiceIcon(String serviceType) {
+    IconData icon;
+    switch (serviceType.toLowerCase()) {
+      case 'haircut':
+        icon = Icons.content_cut;
+        break;
+      case 'beard':
+      case 'beard trim':
+        icon = Icons.face_retouching_natural;
+        break;
+      case 'shave':
+        icon = Icons.face;
+        break;
+      case 'styling':
+        icon = Icons.style;
+        break;
+      case 'wash':
+        icon = Icons.local_car_wash;
+        break;
+      default:
+        icon = Icons.design_services;
+    }
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.orange, Color(0xFFFF6B35)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: Colors.white, size: 16),
+    );
+  }
+
+  Widget _buildDetailCard(IconData icon, String label, String value, Color iconColor) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -149,63 +337,456 @@ class _BookingStep4CompleteState extends State<BookingStep4Complete> {
     final formattedDate = "${widget.selectedDateTime.toLocal()}".split('.')[0];
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Booking Confirmation'),
-        backgroundColor: Colors.deepPurple,
+        automaticallyImplyLeading: false,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange, Color(0xFFFF6B35)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.confirmation_number, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Booking Confirmation',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: isSaving
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-        padding: const EdgeInsets.all(16.0),
+          ? Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.orange.withOpacity(0.1), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+              ),
+              SizedBox(height: 16),
+              Text(
+                "Saving your booking...",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      )
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Expanded(
-              child: Center(
+            // Success Animation
+            ScaleTransition(
+              scale: _scaleAnimation,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.orange, Color(0xFFFF6B35)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 80,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Success Message
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 80),
-                    const SizedBox(height: 16),
                     const Text(
                       "Booking Confirmed!",
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    Text("📅 $formattedDate"),
-                    Text("⏱ ${widget.totalDuration} mins"),
-                    Text("💵 RM ${widget.totalPrice.toStringAsFixed(2)}"),
-                    Text("💳 ${widget.paymentMethod}"),
-                    const SizedBox(height: 20),
-                    const Text("✂️ Services:", style: TextStyle(fontWeight: FontWeight.bold)),
-                    ...widget.selectedServices.map((s) => Text("- ${s['type']}")),
-                    const SizedBox(height: 24),
-                    if (barberPhone != null)
-                      ElevatedButton.icon(
-                        onPressed: openWhatsAppChat,
-                        icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white),
-                        label: const Text("Chat on WhatsApp"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-                        ),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Your appointment has been successfully booked",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ],
                 ),
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false),
-              icon: const Icon(Icons.home),
-              label: const Text("Back to Home"),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+
+            const SizedBox(height: 32),
+
+            // Booking Details Card
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Colors.orange, Color(0xFFFF6B35)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.receipt_long, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              "Booking Details",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        _buildDetailCard(
+                          Icons.event,
+                          "Appointment Date & Time",
+                          formattedDate,
+                          Colors.blue,
+                        ),
+
+                        _buildDetailCard(
+                          Icons.schedule,
+                          "Duration",
+                          "${widget.totalDuration} minutes",
+                          Colors.purple,
+                        ),
+
+                        _buildDetailCard(
+                          Icons.payments,
+                          "Total Amount",
+                          "RM ${widget.totalPrice.toStringAsFixed(2)}",
+                          Colors.green,
+                        ),
+
+                        _buildDetailCard(
+                          Icons.payment,
+                          "Payment Method",
+                          widget.paymentMethod,
+                          Colors.orange,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Services Section
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.orange.withOpacity(0.1), Color(0xFFFF6B35).withOpacity(0.1)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade700,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.design_services, color: Colors.white, size: 16),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Booked Services",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ...widget.selectedServices.map((service) => Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    _buildServiceIcon(service['type'] ?? 'Service'),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      service['type'] ?? 'Service',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )).toList(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/user appointments', (_) => false),
-              icon: const Icon(Icons.calendar_today),
-              label: const Text("View My Appointments"),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[700]),
+
+            const SizedBox(height: 24),
+
+            // WhatsApp Button
+            if (barberPhone != null)
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  width: double.infinity,
+                  height: 56,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF25D366), Color(0xFF128C7E)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF25D366).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: openWhatsAppChat,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "Chat with Barber",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // Action Buttons
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Colors.orange, Color(0xFFFF6B35)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.home, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "Back to Home",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  Container(
+                    width: double.infinity,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/user appointments', (_) => false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.calendar_today, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            "View My Appointments",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),

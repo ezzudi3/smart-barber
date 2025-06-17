@@ -54,7 +54,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Review submitted successfully!')),
+      SnackBar(
+        content: Text('Review submitted successfully!'),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
 
     setState(() {
@@ -62,6 +67,115 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       _rating = 3.0;
       _isSubmitting = false;
     });
+  }
+
+  Widget _buildInfoCard({required String title, required Widget content, required IconData icon}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.orange, Color(0xFFFF6B35)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            content,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceItem(Map<String, dynamic> service) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  service['type'],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  '${service['duration']} minutes',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Colors.orange, Color(0xFFFF6B35)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'RM ${service['price']}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -72,11 +186,37 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final scheduledAt = formatDate(widget.bookingData['scheduledAt']);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Booking Details')),
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text(
+          'Booking Details',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange, Color(0xFFFF6B35)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance.collection('bookings').doc(bookingId).snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+              ),
+            );
+          }
 
           final bookingSnapshot = snapshot.data!;
           final currentData = bookingSnapshot.data() as Map<String, dynamic>;
@@ -86,84 +226,372 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           final paymentMethod = currentData['paymentMethod'] ?? widget.bookingData['paymentMethod'];
           final status = currentData['status'] ?? 'confirmed';
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance.collection('users').doc(barberId).get(),
-              builder: (context, snapshot) {
-                final barberData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
-                final barberName = barberData['name'] ?? 'Unknown Barber';
-                final barberPhone = barberData['phone'] ?? 'N/A';
+          return FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance.collection('users').doc(barberId).get(),
+            builder: (context, snapshot) {
+              final barberData = snapshot.data?.data() as Map<String, dynamic>? ?? {};
+              final barberName = barberData['name'] ?? 'Unknown Barber';
+              final barberPhone = barberData['phone'] ?? 'N/A';
 
-                return ListView(
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   children: [
-                    Text('📅 Date & Time:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(scheduledAt),
-                    const SizedBox(height: 16),
-
-                    Text('💈 Services:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ...services.map((service) => ListTile(
-                      title: Text(service['type']),
-                      subtitle: Text('${service['duration']} min'),
-                      trailing: Text('RM ${service['price']}'),
-                    )),
-                    const SizedBox(height: 16),
-
-                    Text('💳 Payment Method:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(paymentMethod),
-                    const SizedBox(height: 16),
-
-                    Text('💰 Total:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('RM $totalPrice for $totalDuration mins'),
-                    const SizedBox(height: 16),
-
-                    Text('🧔 Barber Info:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('Name: $barberName'),
-                    Text('Phone: $barberPhone'),
-                    const SizedBox(height: 16),
-
-                    Text('📌 Current Status:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(
-                      status.toUpperCase(),
-                      style: TextStyle(
-                        color: statusColor(status),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    if (status.toLowerCase() == 'complete') ...[
-                      const Divider(),
-                      Text('📝 Leave a Review:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Slider(
-                        value: _rating,
-                        onChanged: (value) => setState(() => _rating = value),
-                        min: 1,
-                        max: 5,
-                        divisions: 4,
-                        label: _rating.toStringAsFixed(1),
-                      ),
-                      TextField(
-                        controller: _reviewController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: 'Write your review here...',
-                          border: OutlineInputBorder(),
+                    // Date & Time Card
+                    _buildInfoCard(
+                      title: 'Date & Time',
+                      icon: Icons.calendar_today,
+                      content: Text(
+                        scheduledAt,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _isSubmitting ? null : () => submitReview(barberId),
-                        child: _isSubmitting
-                            ? CircularProgressIndicator(color: Colors.white)
-                            : Text('Submit Review'),
+                    ),
+
+                    // Services Card
+                    _buildInfoCard(
+                      title: 'Services',
+                      icon: Icons.content_cut,
+                      content: Column(
+                        children: services.map((service) => _buildServiceItem(service)).toList(),
                       ),
-                    ]
+                    ),
+
+                    // Payment Method Card
+                    _buildInfoCard(
+                      title: 'Payment Method',
+                      icon: Icons.payment,
+                      content: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.credit_card, color: Colors.orange, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              paymentMethod,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Total Cost Card
+                    _buildInfoCard(
+                      title: 'Total Cost',
+                      icon: Icons.attach_money,
+                      content: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Colors.orange, Color(0xFFFF6B35)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total Amount:',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'RM $totalPrice',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  '$totalDuration minutes',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Barber Info Card
+                    _buildInfoCard(
+                      title: 'Barber Information',
+                      icon: Icons.person,
+                      content: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.person_outline, color: Colors.orange, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Name: $barberName',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.phone_outlined, color: Colors.orange, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Phone: $barberPhone',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Status Card
+                    _buildInfoCard(
+                      title: 'Booking Status',
+                      icon: Icons.info_outline,
+                      content: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: statusColor(status).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: statusColor(status).withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: statusColor(status),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Icon(
+                                status.toLowerCase() == 'complete' ? Icons.check_circle :
+                                status.toLowerCase() == 'cancelled' ? Icons.cancel :
+                                status.toLowerCase() == 'during' ? Icons.access_time :
+                                Icons.local_shipping,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              status.toUpperCase(),
+                              style: TextStyle(
+                                color: statusColor(status),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Review Section (only show if completed)
+                    if (status.toLowerCase() == 'complete') ...[
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.orange, Color(0xFFFF6B35)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.rate_review, color: Colors.white, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Leave a Review',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Rating:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      activeTrackColor: Colors.orange,
+                                      inactiveTrackColor: Colors.orange.withOpacity(0.3),
+                                      thumbColor: const Color(0xFFFF6B35),
+                                      overlayColor: Colors.orange.withOpacity(0.3),
+                                    ),
+                                    child: Slider(
+                                      value: _rating,
+                                      onChanged: (value) => setState(() => _rating = value),
+                                      min: 1,
+                                      max: 5,
+                                      divisions: 4,
+                                      label: _rating.toStringAsFixed(1),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.orange, Color(0xFFFF6B35)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    _rating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: _reviewController,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: 'Write your review here...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: Colors.orange.withOpacity(0.5)),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.orange, width: 2),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _isSubmitting ? null : () => submitReview(barberId),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ).copyWith(
+                                  backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                ),
+                                child: Ink(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Colors.orange, Color(0xFFFF6B35)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    child: _isSubmitting
+                                        ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    )
+                                        : const Text(
+                                      'Submit Review',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                );
-              },
-            ),
+                ),
+              );
+            },
           );
         },
       ),

@@ -6,21 +6,19 @@ import 'package:barberapp1/pages/RequestBookingDetailsScreen.dart';
 import 'package:barberapp1/pages/UserNotificationsScreen.dart';
 import 'package:barberapp1/pages/barber_profile_page.dart';
 import 'package:barberapp1/pages/barbers_by_service.dart';
-import 'package:barberapp1/pages/booking.dart';
 import 'package:barberapp1/pages/booking_step1_select_service.dart';
 import 'package:barberapp1/pages/booking_step2_select_date.dart';
 import 'package:barberapp1/pages/booking_step3_billing.dart';
 import 'package:barberapp1/pages/booking_step4_complete.dart';
-import 'package:barberapp1/pages/forgot_password.dart';
 import 'package:barberapp1/pages/hairstyle_predict_screen.dart';
 import 'package:barberapp1/pages/home.dart';
 import 'package:barberapp1/pages/location_page.dart';
 import 'package:barberapp1/pages/login.dart';
-import 'package:barberapp1/pages/onboarding.dart';
 import 'package:barberapp1/pages/signup.dart';
 import 'package:barberapp1/Barber/homebarber.dart';
 import 'package:barberapp1/Barber/manage_schedule.dart';
 import 'package:barberapp1/Barber/edit_profile.dart';
+import 'package:barberapp1/pages/splashscreen/Splash_Screeen.dart';
 import 'package:barberapp1/pages/user_appointment_list.dart';
 import 'package:barberapp1/pages/userprofile.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -66,7 +64,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home:LogIn(),
+      home:SplashScreen(),
       routes: {
         '/barb': (context) => const HomeBarber(), // This connects to homebarber.dart
         '/editProfile': (context) => const EditBarberProfileScreen(),

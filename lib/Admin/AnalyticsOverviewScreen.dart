@@ -23,6 +23,13 @@ class _AnalyticsOverviewScreenState extends State<AnalyticsOverviewScreen> {
   bool isLoading = true;
   String selectedRange = 'All';
 
+  // Theme Colors
+  static const Color primaryOrange = Color(0xFFFF8C00);
+  static const Color primaryYellow = Color(0xFFFFA500);
+  static const Color darkBlack = Color(0xFF2C2C2C);
+  static const Color sectionGrey = Color(0xFFF0F0F0);
+  static const Color lightGrey = Color(0xFFF8F8F8);
+
   Map<String, int> bookingStatusData = {
     'complete': 0,
     'confirmed': 0,
@@ -34,10 +41,10 @@ class _AnalyticsOverviewScreenState extends State<AnalyticsOverviewScreen> {
   Map<String, int> bookingsPerDay = {}; // For line chart
 
   final List<Map<String, dynamic>> statusSections = [
-    {'key': 'complete', 'color': Colors.green},
-    {'key': 'confirmed', 'color': Colors.blue},
-    {'key': 'pending', 'color': Colors.orange},
-    {'key': 'cancelled', 'color': Colors.red},
+    {'key': 'complete', 'color': Colors.green.shade600, 'description': 'Successfully completed bookings'},
+    {'key': 'confirmed', 'color': Colors.blue.shade600, 'description': 'Confirmed and scheduled bookings'},
+    {'key': 'pending', 'color': Colors.orange.shade600, 'description': 'Awaiting confirmation from barber'},
+    {'key': 'cancelled', 'color': Colors.red.shade600, 'description': 'Cancelled or rejected bookings'},
   ];
 
   @override
@@ -141,7 +148,7 @@ class _AnalyticsOverviewScreenState extends State<AnalyticsOverviewScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading analytics: \$e');
+      print('Error loading analytics: $e');
     }
   }
 
@@ -192,50 +199,198 @@ class _AnalyticsOverviewScreenState extends State<AnalyticsOverviewScreen> {
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
+  Widget _buildAdminGreeting() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [primaryOrange, primaryYellow],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.admin_panel_settings,
+            size: 28,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Hi Admin!',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPieChart() {
     final hasData = bookingStatusData.values.any((value) => value > 0);
-    if (!hasData) return const Text("No booking status data available.");
+    if (!hasData) {
+      return Container(
+        height: 200,
+        child: Center(
+          child: Text(
+            "No booking status data available.",
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+          ),
+        ),
+      );
+    }
 
     bool alreadyNavigated = false;
 
-    return SizedBox(
-      height: 200,
-      child: PieChart(
-        PieChartData(
-          sections: statusSections.map((entry) {
-            final count = bookingStatusData[entry['key']] ?? 0;
-            return PieChartSectionData(
-              value: count.toDouble(),
-              color: entry['color'],
-              title: "${entry['key'][0].toUpperCase()}${entry['key'].substring(1)} ($count)",
-              titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-            );
-          }).toList(),
-          sectionsSpace: 2,
-          centerSpaceRadius: 40,
-          pieTouchData: PieTouchData(
-            touchCallback: (event, response) {
-              if (!event.isInterestedForInteractions || alreadyNavigated) return;
-
-              final touchedSection = response?.touchedSection;
-              if (touchedSection == null) return;
-
-              final touchedIndex = touchedSection.touchedSectionIndex;
-              final selectedStatus = statusSections[touchedIndex]['key'];
-
-              alreadyNavigated = true;
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BookingStatusDetailsScreen(
-                    status: selectedStatus,
-                    bookingRecords: bookingRecords,
+    return Column(
+      children: [
+        // Pie Chart
+        Container(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              sections: statusSections.map((entry) {
+                final count = bookingStatusData[entry['key']] ?? 0;
+                return PieChartSectionData(
+                  value: count.toDouble(),
+                  color: entry['color'],
+                  title: "$count",
+                  titleStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                ),
-              ).then((_) => alreadyNavigated = false);
-            },
+                  radius: 60,
+                );
+              }).toList(),
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
+              pieTouchData: PieTouchData(
+                touchCallback: (event, response) {
+                  if (!event.isInterestedForInteractions || alreadyNavigated) return;
+
+                  final touchedSection = response?.touchedSection;
+                  if (touchedSection == null) return;
+
+                  final touchedIndex = touchedSection.touchedSectionIndex;
+                  final selectedStatus = statusSections[touchedIndex]['key'];
+
+                  alreadyNavigated = true;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BookingStatusDetailsScreen(
+                        status: selectedStatus,
+                        bookingRecords: bookingRecords,
+                      ),
+                    ),
+                  ).then((_) => alreadyNavigated = false);
+                },
+              ),
+            ),
           ),
         ),
+        const SizedBox(height: 20),
+        // Legend
+        _buildLegend(),
+      ],
+    );
+  }
+
+  Widget _buildLegend() {
+    return Column(
+      children: statusSections.map((entry) {
+        final count = bookingStatusData[entry['key']] ?? 0;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300, width: 1),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: entry['color'],
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          entry['key'].toString().toUpperCase(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: darkBlack,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '$count',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: entry['color'],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry['description'],
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSectionBox({required String title, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: sectionGrey,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: darkBlack,
+            ),
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
       ),
     );
   }
@@ -243,115 +398,239 @@ class _AnalyticsOverviewScreenState extends State<AnalyticsOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader("Overview Statistics"),
-          const SizedBox(height: 10),
-          _buildTopMetrics(),
-          const SizedBox(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      return Scaffold(
+        backgroundColor: lightGrey,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildHeader("Booking Trends"),
-              DropdownButton<String>(
-                value: selectedRange,
-                onChanged: (val) {
-                  setState(() {
-                    selectedRange = val!;
-                    isLoading = true;
-                  });
-                  _loadAnalytics();
-                },
-                items: ['All', 'This Week', 'This Month']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(primaryOrange),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Loading Analytics...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: darkBlack,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          _buildLineChart(),
-          const SizedBox(height: 30),
-          _buildHeader("Booking Status Breakdown"),
-          const SizedBox(height: 10),
-          _buildPieChart(),
-          const SizedBox(height: 30),
-          _buildHeader("Export Data"),
-          Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: _exportCSV,
-                icon: const Icon(Icons.download),
-                label: const Text("Export CSV"),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: lightGrey,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Admin Greeting
+            _buildAdminGreeting(),
+            const SizedBox(height: 20),
+
+            // Overview Statistics
+            _buildSectionBox(
+              title: "Overview Statistics",
+              child: _buildTopMetrics(),
+            ),
+            const SizedBox(height: 20),
+
+            // Booking Trends
+            _buildSectionBox(
+              title: "Booking Trends",
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Time Range:",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: darkBlack,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: primaryOrange, width: 1),
+                        ),
+                        child: DropdownButton<String>(
+                          value: selectedRange,
+                          underline: Container(),
+                          icon: Icon(Icons.keyboard_arrow_down, color: primaryOrange, size: 20),
+                          style: TextStyle(color: darkBlack, fontSize: 14),
+                          onChanged: (val) {
+                            setState(() {
+                              selectedRange = val!;
+                              isLoading = true;
+                            });
+                            _loadAnalytics();
+                          },
+                          items: ['All', 'This Week', 'This Month']
+                              .map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e),
+                          ))
+                              .toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildLineChart(),
+                ],
               ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                onPressed: _exportPDF,
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text("Export PDF"),
+            ),
+            const SizedBox(height: 20),
+
+            // Booking Status Breakdown
+            _buildSectionBox(
+              title: "Booking Status Breakdown",
+              child: _buildPieChart(),
+            ),
+            const SizedBox(height: 20),
+
+            // Export Data
+            _buildSectionBox(
+              title: "Export Data",
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _exportCSV,
+                      icon: const Icon(Icons.download, color: Colors.white),
+                      label: const Text(
+                        "Export CSV",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryOrange,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _exportPDF,
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+                      label: const Text(
+                        "Export PDF",
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: darkBlack,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopMetrics() {
+    return Row(
+      children: [
+        Expanded(child: _buildMetricCard("Users", totalUserCount.toString(), primaryOrange)),
+        const SizedBox(width: 12),
+        Expanded(child: _buildMetricCard("Barbers", totalBarberCount.toString(), primaryYellow)),
+        const SizedBox(width: 12),
+        Expanded(child: _buildMetricCard("Bookings", totalBookingCount.toString(), darkBlack)),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard(String title, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(String title) => Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold));
-
-  Widget _buildTopMetrics() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildMetricCard("Users", totalUserCount.toString()),
-        _buildMetricCard("Barbers", totalBarberCount.toString()),
-        _buildMetricCard("Bookings", totalBookingCount.toString()),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value) => Expanded(
-    child: Card(
-      margin: const EdgeInsets.symmetric(horizontal: 5),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 5),
-            Text(title, style: const TextStyle(color: Colors.grey))
-          ],
-        ),
-      ),
-    ),
-  );
-
   Widget _buildLineChart() {
     final spots = _generateTrendSpots();
-    if (spots.isEmpty) return const Text("No booking trend data available.");
+    if (spots.isEmpty) {
+      return Container(
+        height: 180,
+        child: Center(
+          child: Text(
+            "No booking trend data available.",
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+          ),
+        ),
+      );
+    }
 
-    return SizedBox(
-      height: 200,
+    return Container(
+      height: 180,
       child: LineChart(
         LineChartData(
           lineBarsData: [
             LineChartBarData(
               isCurved: true,
               spots: spots,
-              color: Colors.deepPurple,
-              belowBarData: BarAreaData(show: false),
+              color: primaryOrange,
+              barWidth: 3,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: primaryOrange.withOpacity(0.1),
+              ),
             )
           ],
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(show: false),
-          gridData: FlGridData(show: false),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (value) => FlLine(
+              color: Colors.grey.withOpacity(0.3),
+              strokeWidth: 1,
+            ),
+          ),
         ),
       ),
     );

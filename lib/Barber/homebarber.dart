@@ -29,6 +29,22 @@ class _HomeBarberState extends State<HomeBarber> {
 
   final loc.Location location = loc.Location();
 
+  // Updated Theme Colors to match AdminDashboard exactly
+  static const Color primaryOrange = Color(0xFFFF6B35); // Exact match with AdminDashboard
+  static const Color secondaryYellow = Color(0xFFFFC107); // Exact match with AdminDashboard
+  static const Color accentAmber = Color(0xFFFFB300); // Exact match with AdminDashboard
+  static const Color darkOrange = Color(0xFFE55A2B); // Darker shade of primary orange
+  static const Color lightOrange = Color(0xFFFF7A47); // Lighter shade of primary orange
+  static const Color primaryBlack = Color(0xFF1A1A1A); // Match AdminDashboard dark background
+  static const Color cardBlack = Color(0xFF2D2D2D); // Match AdminDashboard card background
+  static const Color surfaceBlack = Color(0xFF262626); // Surface elements
+  static const Color textGrey = Color(0xFF9E9E9E); // Secondary text
+  static const Color dividerGrey = Color(0xFF3A3A3A); // Dividers and borders
+  static const Color accentPurple = Color(0xFF9C27B0); // Purple for schedule
+  static const Color accentBlue = Color(0xFF2196F3); // Blue for profile
+  static const Color accentGreen = Color(0xFF4CAF50); // Green for feedback
+  static const Color textLight = Color(0xFFFFFBE6); // Light text color from AdminDashboard
+
   final List<Map<String, dynamic>> _navItems = [
     {'label': 'Home', 'icon': Icons.home, 'route': '/barb'},
     {'label': 'Appointments', 'icon': Icons.calendar_today, 'route': '/barberAppointments'},
@@ -181,7 +197,12 @@ class _HomeBarberState extends State<HomeBarber> {
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location updated successfully')),
+            SnackBar(
+              content: const Text('Location updated successfully'),
+              backgroundColor: primaryOrange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           );
         }
       }
@@ -228,37 +249,75 @@ class _HomeBarberState extends State<HomeBarber> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Send Feedback'),
-        content: TextField(
-          controller: _feedbackController,
-          maxLines: 4,
-          decoration: const InputDecoration(hintText: 'Enter your feedback here'),
+        backgroundColor: cardBlack,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Send Feedback', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Container(
+          width: double.maxFinite,
+          child: TextField(
+            controller: _feedbackController,
+            maxLines: 4,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Enter your feedback here',
+              hintStyle: TextStyle(color: textGrey),
+              filled: true,
+              fillColor: surfaceBlack,
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: dividerGrey),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: primaryOrange, width: 2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: textGrey)),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final message = _feedbackController.text.trim();
-              final user = FirebaseAuth.instance.currentUser;
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryOrange, secondaryYellow],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: ElevatedButton(
+              onPressed: () async {
+                final message = _feedbackController.text.trim();
+                final user = FirebaseAuth.instance.currentUser;
 
-              if (message.isNotEmpty && user != null) {
-                await FirebaseFirestore.instance.collection('feedbacks').add({
-                  'message': message,
-                  'role': 'barber',
-                  'timestamp': Timestamp.now(),
-                  'userId': user.uid,
-                });
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Thank you for your feedback!')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
-            child: const Text('Submit'),
+                if (message.isNotEmpty && user != null) {
+                  await FirebaseFirestore.instance.collection('feedbacks').add({
+                    'message': message,
+                    'role': 'barber',
+                    'timestamp': Timestamp.now(),
+                    'userId': user.uid,
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Thank you for your feedback!'),
+                      backgroundColor: primaryOrange,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              ),
+              child: const Text('Submit', style: TextStyle(color: Colors.white)),
+            ),
           ),
         ],
       ),
@@ -268,128 +327,538 @@ class _HomeBarberState extends State<HomeBarber> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        title: const Text('Barber Dashboard', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Stack(
+      backgroundColor: primaryBlack,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
               children: [
-                const Icon(Icons.notifications, color: Colors.white),
-                if (hasUnreadNotifications)
-                  const Positioned(
-                    right: 0,
-                    top: 0,
-                    child: CircleAvatar(
-                      radius: 5,
-                      backgroundColor: Colors.red,
-                    ),
-                  ),
-              ],
-            ),
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/barberNotifications');
-              checkUnreadNotifications();
-            },
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 10),
-            Text("Current Location:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text(_address, style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
-                      ? NetworkImage(profileImageUrl!)
-                      : const AssetImage('images/boy.jpg') as ImageProvider,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Location Header with Notification
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Row(
                     children: [
-                      Text('Welcome, $barberName!',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text('Today: $todayAppointments appointments • RM ${todayEarnings.toStringAsFixed(2)}'),
-                      Text('Requested Today: $todayRequestedAppointments requests • RM ${todayRequestedEarnings.toStringAsFixed(2)}'),
-                      Text('Total: $totalCompletedAppointments completed • RM ${totalEarnings.toStringAsFixed(2)}'),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: primaryOrange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.location_on, color: primaryOrange, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Current Location',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _address,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: textGrey,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: cardBlack,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: Stack(
+                            children: [
+                              Icon(Icons.notifications_outlined, color: Colors.white, size: 26),
+                              if (hasUnreadNotifications)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+                                    child: Text(
+                                      '!',
+                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          onPressed: () async {
+                            await Navigator.pushNamed(context, '/barberNotifications');
+                            checkUnreadNotifications();
+                          },
+                        ),
+                      ),
                     ],
                   ),
-                )
+                ),
+
+                // Profile Card with updated gradient matching AdminDashboard
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        primaryOrange,
+                        secondaryYellow,
+                        accentAmber,
+                      ],
+                      stops: [0.0, 0.5, 1.0],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryOrange.withOpacity(0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      // Background pattern
+                      Positioned(
+                        right: -20,
+                        top: -20,
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      Positioned(
+                        right: 20,
+                        bottom: -30,
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 40,
+                                    backgroundImage: profileImageUrl != null && profileImageUrl!.isNotEmpty
+                                        ? NetworkImage(profileImageUrl!)
+                                        : const AssetImage('images/boy.jpg') as ImageProvider,
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back!',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white.withOpacity(0.95),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        barberName,
+                                        style: const TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Stats Row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStatCard(
+                                    'TODAY',
+                                    todayAppointments.toString(),
+                                    'RM ${todayEarnings.toStringAsFixed(0)}',
+                                    Icons.today_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStatCard(
+                                    'REQUESTS',
+                                    todayRequestedAppointments.toString(),
+                                    'RM ${todayRequestedEarnings.toStringAsFixed(0)}',
+                                    Icons.assignment_outlined,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStatCard(
+                                    'TOTAL',
+                                    totalCompletedAppointments.toString(),
+                                    'RM ${totalEarnings.toStringAsFixed(0)}',
+                                    Icons.trending_up_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Quick Actions Grid with updated colors
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _buildQuickActionCard(
+                      'Appointments',
+                      Icons.calendar_today,
+                      primaryOrange,
+                      '/barberAppointments',
+                    ),
+                    _buildQuickActionCard(
+                      'Schedule',
+                      Icons.schedule,
+                      secondaryYellow,
+                      '/schedule',
+                    ),
+                    _buildQuickActionCard(
+                      'Profile',
+                      Icons.edit,
+                      accentAmber,
+                      '/editProfile',
+                    ),
+                    _buildQuickActionCard(
+                      'Feedback',
+                      Icons.feedback,
+                      accentGreen,
+                      null,
+                      onTap: showFeedbackDialog,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+
+                // Action Buttons
+                Column(
+                  children: [
+                    _buildFullWidthButton(
+                      'Switch to User Mode',
+                      Icons.swap_horiz,
+                      primaryOrange,
+                      switchRole,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFullWidthButton(
+                      'Logout',
+                      Icons.logout,
+                      surfaceBlack,
+                      logout,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 100), // Extra space for bottom navigation
               ],
             ),
-            const SizedBox(height: 30),
-            _buildDashboardButton(context, title: 'View Appointments', icon: Icons.calendar_today, color: Colors.teal, route: '/barberAppointments'),
-            const SizedBox(height: 20),
-            _buildDashboardButton(context, title: 'Manage Schedule', icon: Icons.schedule, color: Colors.orange, route: '/schedule'),
-            const SizedBox(height: 20),
-            _buildDashboardButton(context, title: 'Edit Profile', icon: Icons.edit, color: Colors.indigo, route: '/editProfile'),
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: logout,
-              icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, padding: const EdgeInsets.symmetric(vertical: 16)),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: switchRole,
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('Switch to User'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(vertical: 16)),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: showFeedbackDialog,
-              icon: const Icon(Icons.feedback),
-              label: const Text('Give Feedback'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple, padding: const EdgeInsets.symmetric(vertical: 16)),
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              cardBlack,
+              primaryBlack,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.deepPurple,
-        onTap: _onTabTapped,
-        items: _navItems.map((item) => BottomNavigationBarItem(
-          icon: Icon(item['icon']),
-          label: item['label'],
-        )).toList(),
+        child: SafeArea(
+          child: Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: _navItems.asMap().entries.map((entry) {
+                int index = entry.key;
+                Map<String, dynamic> item = entry.value;
+                bool isSelected = _currentIndex == index;
+
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => _onTabTapped(index),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                          colors: [primaryOrange, secondaryYellow],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                            : null,
+                        color: isSelected ? null : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: isSelected
+                            ? [
+                          BoxShadow(
+                            color: primaryOrange.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            item['icon'],
+                            color: isSelected ? Colors.white : textGrey,
+                            size: isSelected ? 24 : 22,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item['label'],
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : textGrey,
+                              fontSize: 10,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildDashboardButton(
-      BuildContext context, {
-        required String title,
-        required IconData icon,
-        required Color color,
-        required String route,
-      }) {
-    return ElevatedButton(
-      onPressed: () => Navigator.pushNamed(context, route),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Widget _buildStatCard(String title, String number, String amount, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
         children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 12),
-          Text(title, style: const TextStyle(fontSize: 18, color: Colors.white)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            number,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.white.withOpacity(0.9),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.8),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCard(
+      String title,
+      IconData icon,
+      Color color,
+      String? route, {
+        VoidCallback? onTap,
+      }) {
+    return GestureDetector(
+      onTap: () {
+        if (onTap != null) {
+          onTap();
+        } else if (route != null) {
+          Navigator.pushNamed(context, route);
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBlack,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullWidthButton(
+      String title,
+      IconData icon,
+      Color color,
+      VoidCallback onPressed,
+      ) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: color == primaryOrange
+            ? LinearGradient(
+          colors: [primaryOrange, secondaryYellow],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        )
+            : null,
+        color: color == primaryOrange ? null : color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white, size: 20),
+        label: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       ),
     );
   }
